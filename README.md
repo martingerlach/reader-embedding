@@ -4,27 +4,21 @@ Constructing embedding of reading sessions.
 
 ## notebooks/
 
-**Extracting data from webrequest logs**
-- 01a_reading-sessions_get-data-from-webrequest_all-wikis.ipynb  
-  for all wikipedias mathcing qids.
-- 01b_reading-sessions_get-data-from-webrequest_single-wiki.ipynb  
-  for a single wikipedias only keeping page-ids.
-
-
-**Sessionizing and filtering**
-- 02a_reading-sessions_filter-sessionize_qid.ipynb  
-  make sessions of qids (all wikis or single wiki)
-- 02b_reading-sessions_filter-sessionize_pageid.ipynb  
-  make sessions of pageids (only single wikis)
-
+**Generating reading sessions**
+- reading-sessions_01-get-data-from-webrequest.ipynb  
+  get reading sessions from from webrequest
+- reading-sessions_02-filter-sessionize.ipynb  
+  filter and sessionize reading sessions for different projects (wikidata, enwiki, etc.)
+- reading-sessions_03-make-train-dev-test.ipynb  
+  split data (or subsample) into train-dev-test data
 
 **Running word2vec on the filtered sessions**
-- 03_reading-sessions_run-word2vec  
+- run-word2vec.ipynb    
   runnning fasttetext's word2vec and save model
 
-
 **Creating lists of related articles based on embedding**
-- 04_create-list-of-related-articles
+- list-of-related-articles_from-word2vec.ipynb  
+  create list of related articles based on word2vec embedding from reading sessions
 
 
 Note that some of the notebooks can only be run on Wikimedia's stat-machines.

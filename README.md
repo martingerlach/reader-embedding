@@ -1,8 +1,9 @@
 # reader-embedding
 
-Constructing embedding of reading sessions.
+Working with embeddings for reading sessions.
 
-## notebooks/
+
+## code/
 
 **Generating reading sessions**
 - reading-sessions_01-get-data-from-webrequest.ipynb  
@@ -20,5 +21,10 @@ Constructing embedding of reading sessions.
 - list-of-related-articles_from-word2vec.ipynb  
   create list of related articles based on word2vec embedding from reading sessions
 
+**Running morelike for evaluating next-article-prediction**
+- run-morelike.ipynb  
+  notebook to show basic functionality
+- morelike.py  
+  script to get eval-metrics for morelike on testfile
 
 Note that some of the notebooks can only be run on Wikimedia's stat-machines.

@@ -8,6 +8,8 @@ import time
 import random
 import requests
 
+from utils.nextarticle import prepare_queries
+from utils.metrics import ranks_metrics
 
 
 
@@ -17,7 +19,7 @@ def main():
         Try: python morelike.py -i <file> -k 100 -n 1000 -w enwiki'
         )
     parser.add_argument("-i","--input_file",
-                        default="../output/reading-sessions-corpora/enwiki_sample-100000.test",
+                        default="../output/reading-sessions-corpora/enwiki/enwiki_sample-100000.test",
                         help="File with reading sessions")
 
     parser.add_argument("-w","--wiki",
@@ -38,41 +40,34 @@ def main():
                         default="example_output_data.txt",
                         help="Output json with different metrics")
 
+    parser.add_argument("-s","--seed",
+                        default=None,
+                        help="seed for random selection of ")
+
+    parser.add_argument("-r","--rest",
+                        default=0.1,
+                        type = float,
+                        help="time to rest between calls to the morelike API ")
 
     args = parser.parse_args()
 
-
+    ## make query pairs: list of source-target pairs of articles from reading sessions
     try:
-        queries = prepare_queries_pairs(args.input_file,N_max=args.N_eval_max)
+        queries = prepare_queries(args.input_file,N_max=args.N_eval_max,seed=args.seed)
     except:
         print('Could not load sessions from input file %s'%(args.input_file))
         print('Check that the file exists')
         return
 
-    result = queriesPairsEval(queries,wiki=args.wiki,k=args.k)
+    ## assign ranks to the queries via morelike
+    ranks = queriesRanks(queries,wiki=args.wiki,k=args.k, rest = args.rest)
+
+    ## calculate some metrics from the ranks
+    result = ranks_metrics(ranks)
+    ## write to file
     with open(args.output_results,'w') as fout:
         fout.write(json.dumps(result) + '\n')
     print('Done: results are in %s'%args.output_results)
-
-def prepare_queries_pairs(f, N_max = -1 ):
-    '''
-    from a file containing sequences of pageview.
-    select one random pair of consecutive pageivews.
-    returns a list of tuples [(src,trg)], where src, trg are of type str.
-
-    get at most N_max pairs (default is -1 == all).
-    '''
-    queries = []; count=0
-    for line in open(f):
-        session = line.strip().split(" ")
-        if len(session)>=2:
-            idx_src = random.randint(0,len(session)-2)
-            queries.append(( session[idx_src],session[idx_src+1] ))
-            count+=1
-        if count == N_max:
-            break
-    print("Extracted "+str(count)+" pairs")
-    return queries
 
 def titleFromPageid(page_id,wiki):
     '''
@@ -114,8 +109,9 @@ def morelikeFromTitle(title,wiki,k=100):
         'format': 'json',
         'srsearch': 'morelike:'+title,
         'srnamespace' : 0,
-        'srwhat': 'text',
-        'srprop': 'wordcount',
+        # 'srwhat': 'text',
+        'srqiprofile': 'classic_noboostlinks',
+        'srprop': 'pageid',
         'srlimit': k
     }
     try:
@@ -140,13 +136,12 @@ def morelikeFromPageid(page_id,wiki,k=100):
         result = []
     return result
 
-def queriesPairsToRank(queries,wiki,k=100):
+def queriesRanks(queries,wiki,k=100, rest = 0.1):
     '''
     from a list of pairs (src,target)
     - get the k nearest neighbors of src via morelike in specific wiki
     - check rank of trg among nearest neighbors
     '''
-    t_rest = 0.1 ## be nice to morelike API
     rank_list = []
     for pid_src,pid_trg in queries:
         result = morelikeFromPageid(pid_src,wiki)
@@ -157,37 +152,8 @@ def queriesPairsToRank(queries,wiki,k=100):
             rank = 1e6
         rank_list.append(rank)
         
-        time.sleep(t_rest)
+        time.sleep(rest) ## be nice to the AOU
     return np.array(rank_list)
-
- 
-def metrics(mrr_list):
-    '''
-    calculate metrics associated with rank querying from a list of ranks
-    - mrr (mean reciprocal rank)
-    - recall@k, whether trg was among top-k in mrr-list
-    '''
-    mrr = np.mean(1/mrr_list)
-    recall1 = np.where((mrr_list <= 1) & (mrr_list != 1e6))[0].shape[0]/mrr_list.shape[0]
-    recall10 = np.where((mrr_list <= 10) & (mrr_list != 1e6))[0].shape[0]/mrr_list.shape[0]
-    recall50 = np.where((mrr_list <= 50) & (mrr_list != 1e6))[0].shape[0]/mrr_list.shape[0]
-    recall100 = np.where((mrr_list <= 100) & (mrr_list != 1e6))[0].shape[0]/mrr_list.shape[0]
-    
-    dict_result = {
-        'N':mrr_list.shape[0], 
-        'MRR':mrr,
-        'Recall@1':recall1,
-        'Recall@10':recall10,
-        'Recall@50':recall50,
-        'Recall@100':recall100
-    }
-    return dict_result
-#     return mrr_list.shape[0], mrr, recall1, recall10, recall50, recall100
-
-def queriesPairsEval(queries,wiki,k=100):
-    list_rank = queriesPairsToRank(queries,wiki,k=k)
-    return metrics(list_rank)
-
 
 if __name__ == "__main__":
     main()
